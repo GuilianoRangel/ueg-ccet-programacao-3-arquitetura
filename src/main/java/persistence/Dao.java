@@ -23,16 +23,15 @@ public class Dao {
         return String.join(",", lista);
     }
     public List<Table> listAll(){
-        String columnNames =this.getTableColumnsNamesForSelect(this.table.getColumnNames());// "coluan1, coluna1 ";
+        String columnNames =this.getTableColumnsNamesForSelect(this.table.getColumnNames());
         String tableName = this.table.getTableName();
-        String sql = "select " +
-                columnNames + // nome das colunas
-                " from " +
-                tableName ; // nome da tabela.
+        String sql = "select " + columnNames + " from " + tableName ;
+
         // TODO Remover debug
         System.out.println("SQL: " + sql);
+
+        List<Table> list = new ArrayList<>();
         try {
-            List<Table> list = new ArrayList<>();
             PreparedStatement preparedStatement = this.db.prepareStatement(sql);
             ResultSet rs = preparedStatement.executeQuery();
             while(rs.next()){
@@ -41,8 +40,12 @@ public class Dao {
                 for (String columnName : this.table.getColumnNames()) {
                     valores.add(rs.getObject(columnName));
                 }
-                // criar uma tabela.
-                // reciso preencher o objeto tabela com a lista valores
+
+                Table newTable = this.table.getNewTableObject();
+
+                newTable.setTableColumnValues(valores);
+
+                list.add(newTable);
             }
 
         } catch (SQLException e) {
@@ -51,6 +54,6 @@ public class Dao {
         }
 
 
-        return null;
+        return list;
     }
 }

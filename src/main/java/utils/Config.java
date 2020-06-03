@@ -1,7 +1,7 @@
 package utils;
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Properties;
 
 public class Config {
@@ -10,11 +10,21 @@ public class Config {
 
     private Config(){
         try {
-            properties.load(new FileInputStream("resources/configuration"));
+            System.out.println(new java.io.File( "." ).getCanonicalPath());
+            InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream("app.properties");
+            properties.load(resourceAsStream);
         } catch (IOException e) {
-            System.out.println("Erro ao fazer leitura do arquivo de configuração");
+            System.out.println("Erro ao fazer leitura do arquivo de configuração - Utilizando Arquivo padrão da ARquitetura");
             e.printStackTrace();
-            System.exit(1);
+        } catch (NullPointerException e){
+            System.out.println("utilizando arquivo de configuração da Arquitetura");
+            InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream("app-arquitetura.properties");
+            try {
+                properties.load(resourceAsStream);
+            } catch (IOException ex) {
+                System.out.println("Erro ao fazer leitura do arquivo de configuração da ARquitetura");
+                ex.printStackTrace();
+            }
         }
     }
 
@@ -38,11 +48,11 @@ public class Config {
     }
 
     public String getDatabaseUser(){
-        return this.properties.getProperty("database.password","postgres");
+        return this.properties.getProperty("database.user","postgres");
     }
 
     public String getDatabasePassword(){
-        return this.properties.getProperty("database.user","postgres");
+        return this.properties.getProperty("database.password","postgres");
     }
 
 }
