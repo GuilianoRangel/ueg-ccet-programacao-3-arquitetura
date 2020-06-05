@@ -34,6 +34,13 @@ public abstract @Data class Table {
      */
     public abstract boolean setTableColumnValues(List<Object> valores);
 
+    /**
+     * Retorna uma lista com os valores da tabela, na mesma
+     * ordem retornada pela metodo getColumnNames()
+     * @return
+     */
+    public abstract Object getColumnValue(String columnName);
+
 
     /**
      * Método retorna o nome da coluna PK da tabela.

@@ -20,16 +20,14 @@ public @Data class FakeTable extends Table{
 
     @Override
     public String getPkColumnName() {
-        return "id";
+        return "pk";
     }
 
     /**
      * @return retornar true se deve utilizar a pk no insert, false caso não deva
      */
     @Override
-    public boolean usePkInInsert() {
-        return false;
-    }
+    public boolean usePkInInsert() { return true;  }
 
     @Override
     public String getTableName() {
@@ -59,6 +57,26 @@ public @Data class FakeTable extends Table{
         this.setNome((String) valores.get(1));
         this.setTelefone((String) valores.get(2));
         return false;
+    }
+
+    /**
+     * Retorna uma lista com os valores da tabela, na mesma
+     * ordem retornada pela metodo getColumnNames()
+     *
+     * @param columnName
+     * @return
+     */
+    @Override
+    public Object getColumnValue(String columnName) {
+        if(columnName.equals("pk")){
+            return this.getPk();
+        }else if(columnName.equals("nome")){
+            return this.getNome();
+        }else if(columnName.equals("telefone")){
+            return this.getTelefone();
+        }
+
+        return null;
     }
 
 
