@@ -1,5 +1,6 @@
 package model;
 
+import exceptions.ProgrammerException;
 import lombok.Data;
 
 import java.util.List;
@@ -34,4 +35,30 @@ public abstract @Data class Table {
     public abstract boolean setTableColumnValues(List<Object> valores);
 
 
+    /**
+     * Método retorna o nome da coluna PK da tabela.
+     * @return
+     */
+    public abstract String getPkColumnName();
+
+    /**
+     * @return retornar true se deve utilizar a pk no insert, false caso não deva
+     */
+    public abstract boolean usePkInInsert();
+
+    public String getPkColumnNameUtil(){
+        List<String> columnNames = this.getColumnNames();
+        boolean findPk = false;
+        for (String columnName : columnNames) {
+            if(columnName.equals(this.getPkColumnName())){
+                findPk = true;
+            }
+        }
+        if (!findPk) {
+            throw  new ProgrammerException("ERRO: A pk retornada no Método getPkColumnName() " +
+                    " da classe: "+this.getClass().getName()+
+                    " Não está na lista de Colunas Retornada pelo método getColumnsNames()");
+        }
+        return this.getPkColumnName();
+    }
 }

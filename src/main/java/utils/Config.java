@@ -17,7 +17,7 @@ public class Config {
             System.out.println("Erro ao fazer leitura do arquivo de configuração - Utilizando Arquivo padrão da ARquitetura");
             e.printStackTrace();
         } catch (NullPointerException e){
-            System.out.println("utilizando arquivo de configuração da Arquitetura");
+            System.out.println("#### Utilizando arquivo de configuração da Arquitetura ####");
             InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream("app-arquitetura.properties");
             try {
                 properties.load(resourceAsStream);
