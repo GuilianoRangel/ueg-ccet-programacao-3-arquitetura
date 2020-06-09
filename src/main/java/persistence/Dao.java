@@ -34,35 +34,109 @@ public class Dao implements IDao{
             return columnNames;
         }
         // Filtra a lista tranzendo removendo a pk da lista de colunas.
-        List<String> lista = columnNames.stream().filter(
-                    value -> !value.equals(this.table.getPkColumnNameUtil())
+        List<String> lista = this.getTableColumnNamesWithoutPk(table);
+        return lista;
+    }
+
+    private List<String> getTableColumnNamesWithoutPk(Table table){
+        List<String> lista = table.getColumnNames().stream().filter(
+                value -> !value.equals(this.table.getPkColumnNameUtil())
         ).collect(Collectors.toList());
         return lista;
     }
 
     public List<Table> listAll(){
+        return findOrList(null);
+    }
+
+    public List<Table> find(Table table){
+        return findOrList(table);
+    }
+
+    /**
+     * Metodo utilizado para listar ou persquisar.
+     * Caso seja informado um table o objeto os seus atributos serão utilizados para
+     * fazer condicional,
+     * Os atributos do tipo String será feito por like os demais por igualdade.
+     * @param table  objeto com os valores de busca
+     * @return - lista de Table conforme parâmetros informados.
+     */
+    private List<Table> findOrList(Table table) {
         String columnNames =this.getTableColumnsNamesForSelect(this.table.getColumnNames());
         String tableName = this.table.getTableName();
         String sql = "select " + columnNames + " from " + tableName ;
+        // Gerar SQL de where " where colun1 = ? and colu=?
+        String sqlWhere = getFindStringWhere(table);
+        sql = sql + sqlWhere;
 
         // TODO Remover debug
         System.out.println("SQL: " + sql);
 
-        List<Table> list = new ArrayList<>();
+        List<Table> list;
         try {
             PreparedStatement preparedStatement = this.db.prepareStatement(sql);
+
+            setPreparedStatmentForWhere(table, preparedStatement);
+
             ResultSet rs = preparedStatement.executeQuery();
-            while(rs.next()){
-                List<Object> valores = new ArrayList<>();
-                for (String columnName : this.table.getColumnNames()) {
-                    valores.add(rs.getObject(columnName));
-                }
-                Table newTable = this.table.getNewTableObject();
-                newTable.setTableColumnValues(valores);
-                list.add(newTable);
-            }
+            list = getListTableFromResultset(rs);
         } catch (SQLException e) {
           throw new RuntimeException(e);
+        }
+        return list;
+    }
+
+    private void setPreparedStatmentForWhere(Table table, PreparedStatement preparedStatement) throws SQLException {
+        if(table!=null) {
+            List<String> columnNamesWhere = table.getColumnNames();
+            System.out.println(columnNamesWhere);
+            int psInd = 1;
+            for(int i=1; i <= columnNamesWhere.size(); i++){
+                Object value = table.getColumnValue(columnNamesWhere.get(i-1));
+                System.out.println("Value:"+columnNamesWhere.get(i-1)+"="+value+" psInd:"+psInd);
+                if(value != null){
+                    if(value instanceof  String){
+                        value = (String)value + "%";
+                    }
+                    System.out.println("Value:"+columnNamesWhere.get(i-1)+"="+value);
+                    preparedStatement.setObject(psInd++, value);
+                }
+            }
+        }
+    }
+
+    private String getFindStringWhere(Table table) {
+        String sqlWhere = "";
+        if(table != null){
+            List<String> columnWhere = table.getColumnNames();
+            for(String columnName: columnWhere){
+                Object value = table.getColumnValue(columnName);
+                if(value !=null ){
+                    if(value instanceof String){
+                        sqlWhere += "and " +columnName+ " like ? ";
+                    }else {
+                        sqlWhere += "and " + columnName + " = ? ";
+                    }
+                }
+            }
+            if(!sqlWhere.equals("")){
+                sqlWhere = " where "+sqlWhere.substring(3);
+
+            }
+        }
+        return sqlWhere;
+    }
+
+    private List<Table> getListTableFromResultset(ResultSet rs) throws SQLException {
+        List<Table> list = new ArrayList<>();
+        while(rs.next()){
+            List<Object> valores = new ArrayList<>();
+            for (String columnName : this.table.getColumnNames()) {
+                valores.add(rs.getObject(columnName));
+            }
+            Table newTable = this.table.getNewTableObject();
+            newTable.setTableColumnValues(valores);
+            list.add(newTable);
         }
         return list;
     }
@@ -82,10 +156,8 @@ public class Dao implements IDao{
                 " values("+tableStrColumnValues+")";
         System.out.println("SQL Insert: "+sql);
         PreparedStatement ps;
-
-        ps = getPreparedStatementForInsert(sql);
-
-        Return rt = setValoresPreparedstatementForInsert(table, ps);
+        ps = getPreparedStatementForInsert(PersistenceAction.INSERT,sql);
+        Return rt = setValuesPreparedstatementForInsert(table, ps);
         if (rt != null) return rt;
 
         try {
@@ -106,10 +178,74 @@ public class Dao implements IDao{
         return rt;
     }
 
-    private Return setValoresPreparedstatementForInsert(Table table, PreparedStatement ps) {
+    /**
+     * Metodo utilizado para atualizar um registro no banco de dados
+     * O Modelo de ve ser enviado prenchido.
+     * @param table
+     * @return
+     */
+    public Return update(Table table) throws PersistenceException {
+        validFilledTable(table);
+        String strColumForUpdate = getStrColumnForUpdate(table);
+        String strPkName = table.getPkColumnName();
+        // TODO cuidado, deve ser possível pk de outro tipo
+        Integer  pkValue = table.getPk();
+
+        String sql = "update "+table.getTableName()+ " "+
+                " set " + strColumForUpdate +
+                " where "+strPkName+" = ? " ;
+        System.out.println("SQL Update: "+sql);
+
+        PreparedStatement ps;
+
+        ps = getPreparedStatementForInsert(PersistenceAction.UPDATE,sql);
+
+        Return rt = this.setValuesPreparedstatementForUpdate(table,ps);
+
+        if (rt != null) return rt;
+
+        try {
+            int i = ps.executeUpdate();
+        } catch (SQLException e) {
+            return new Return(false, "Erro ao atualizar:", Arrays.asList(e.getMessage()));
+        }
+
+        rt = new Return(true, "Atualização relalizada com sucesso!");
+        return rt;
+    }
+
+    private String getStrColumnForUpdate(Table table) {
+        List<String> columnUpdates = this.getTableColumnNamesWithoutPk(table);
+        String strColumForUpdate = "";
+        for (String column : columnUpdates) {
+            strColumForUpdate += ", "+column+" = ?";
+        }
+        strColumForUpdate = strColumForUpdate.substring(1);
+        return strColumForUpdate;
+    }
+
+    private Return setValuesPreparedstatementForInsert(Table table, PreparedStatement ps) {
         // insert into fake_table(nome) values(?)
         // pk=10, nome="teste", telefone="234234"
         List<String> tableColumnNames = this.getTableColumnsNamesForInsert(table);
+        return setValuesToTable(table, ps, tableColumnNames);
+    }
+    private Return setValuesPreparedstatementForUpdate(Table table, PreparedStatement ps) {
+        List<String> tableColumnNames = this.getTableColumnNamesWithoutPk(table);
+        try {
+            ps.setObject(tableColumnNames.size()+1, table.getPk());
+        } catch (SQLException e) {
+            Return rt = new Return(
+                    false,
+                    "Erro ao Configurar Valores na tabela " +
+                            table.getTableName()+ " no Campo: "+table.getPkColumnName()
+                            + "Valor informado: "+table.getPk(), Arrays.asList(e.getMessage()));
+            return rt;
+        }
+        return setValuesToTable(table, ps, tableColumnNames);
+    }
+
+    private Return setValuesToTable(Table table, PreparedStatement ps, List<String> tableColumnNames) {
         for(int i = 1; i<= tableColumnNames.size(); i++ ){
             String columnName = tableColumnNames.get(i-1);
             Object value = table.getColumnValue(columnName);
@@ -118,7 +254,7 @@ public class Dao implements IDao{
             } catch (SQLException e) {
                 Return rt = new Return(
                         false,
-                        "Erro ao Configurar Valores para Inserção na tabela " +
+                        "Erro ao Configurar Valores na tabela " +
                                 table.getTableName()+ " no Campo: "+columnName
                                 + "Valor informado: "+value, Arrays.asList(e.getMessage()));
                 return rt;
@@ -127,14 +263,14 @@ public class Dao implements IDao{
         return null;
     }
 
-    private PreparedStatement getPreparedStatementForInsert(String sql) throws PersistenceException {
+    private PreparedStatement getPreparedStatementForInsert(PersistenceAction pa, String sql) throws PersistenceException {
         PreparedStatement ps;
         try {
             ps = this.db.prepareStatement(sql);
         } catch (SQLException e) {
            throw new PersistenceException(
-                   PersistenceAction.INSERT,
-                   "Erro ao Preparar SQL para Inserção: "+ sql, e);
+                   pa,
+                   "Erro ao Preparar SQL: "+ sql, e);
         }
         return ps;
     }
