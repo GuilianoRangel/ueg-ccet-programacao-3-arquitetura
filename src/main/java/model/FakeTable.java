@@ -1,11 +1,12 @@
 package model;
 
 import lombok.Data;
+import utils.Return;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public @Data class FakeTable extends Table{
+public @Data class FakeTable extends Table<Integer>{
     private String nome;
     private String telefone;
 
@@ -52,11 +53,24 @@ public @Data class FakeTable extends Table{
      * @return
      */
     @Override
-    public boolean setTableColumnValues(List<Object> valores) {
-        this.setPk((Integer) valores.get(0));
-        this.setNome((String) valores.get(1));
-        this.setTelefone((String) valores.get(2));
-        return false;
+    public Return setTableColumnValues(List<Object> valores) {
+        Return ret = new Return(true, "sucesso");
+        try {
+            this.setPk((Integer) valores.get(0));
+        }catch(Exception e){
+            setReturnColumnError("pk", valores.get(0), ret);
+        }
+        try {
+            this.setNome((String) valores.get(1));
+        }catch(Exception e){
+            setReturnColumnError("nome", valores.get(1), ret);
+        }
+        try {
+            this.setTelefone((String) valores.get(2));
+        }catch(Exception e){
+            setReturnColumnError("telefone", valores.get(2), ret);
+        }
+        return ret;
     }
 
     /**

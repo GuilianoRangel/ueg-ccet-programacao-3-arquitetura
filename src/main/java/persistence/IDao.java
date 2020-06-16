@@ -7,6 +7,9 @@ import utils.Return;
 import java.util.List;
 
 public interface IDao {
-    List<Table> listAll();
-    Return insert(Table table) throws PersistenceException;
+    List<Table<?>> listAll();
+    List<Table<?>> find(Table<?> table);
+    Return update(Table<?> table) throws PersistenceException;
+    Return insert(Table<?> table) throws PersistenceException;
+    Return delete(Table<?> table) throws PersistenceException;
 }

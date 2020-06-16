@@ -2,11 +2,15 @@ package model;
 
 import exceptions.ProgrammerException;
 import lombok.Data;
+import utils.Return;
 
 import java.util.List;
 
-public abstract @Data class Table {
-    private Integer pk;
+public abstract @Data class Table<TYPE> {
+    public static final String ERRO_CONFIGURANDO_VALORES_TABELA = "Erro Configurando Valores Tabela!";
+    public static final String ERRO_COLUNA = "Erro Coluna: ";
+    public static final String ERRO_VALOR = ", valor: ";
+    private TYPE pk;
 
     /**
      * Método deve retornar uma lista com o nome das colunas da tabela.
@@ -32,7 +36,7 @@ public abstract @Data class Table {
      * @param valores
      * @return
      */
-    public abstract boolean setTableColumnValues(List<Object> valores);
+    public abstract Return setTableColumnValues(List<Object> valores);
 
     /**
      * Retorna uma lista com os valores da tabela, na mesma
@@ -41,17 +45,16 @@ public abstract @Data class Table {
      */
     public abstract Object getColumnValue(String columnName);
 
+    /**
+     * @return retornar true se deve utilizar a pk no insert, false caso não deva
+     */
+    public abstract boolean usePkInInsert();
 
     /**
      * Método retorna o nome da coluna PK da tabela.
      * @return
      */
     public abstract String getPkColumnName();
-
-    /**
-     * @return retornar true se deve utilizar a pk no insert, false caso não deva
-     */
-    public abstract boolean usePkInInsert();
 
     public String getPkColumnNameUtil(){
         List<String> columnNames = this.getColumnNames();
@@ -67,5 +70,19 @@ public abstract @Data class Table {
                     " Não está na lista de Colunas Retornada pelo método getColumnsNames()");
         }
         return this.getPkColumnName();
+    }
+
+    // Tratamentos de erro
+
+    /**
+     * Metodo utilizado para configura mensagem de erro ao configurar coluna
+     * @param columnName - Nome da Coluna
+     * @param value - Valor da coluna(Object) que será impresso com toString()
+     * @param ret - Obejto Return que será configurado com a mensagem de erro.
+     */
+    protected void setReturnColumnError(String columnName, Object value, Return ret) {
+        ret.setSucesso(false);
+        ret.setMessage(ERRO_CONFIGURANDO_VALORES_TABELA);
+        ret.getErros().add(ERRO_COLUNA + columnName + ERRO_VALOR + value);
     }
 }
