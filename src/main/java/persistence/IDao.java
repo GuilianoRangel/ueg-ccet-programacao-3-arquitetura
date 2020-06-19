@@ -12,4 +12,5 @@ public interface IDao {
     Return update(Table<?> table) throws PersistenceException;
     Return insert(Table<?> table) throws PersistenceException;
     Return delete(Table<?> table) throws PersistenceException;
+    Table<?> getByPk(Table<?> table)throws PersistenceException;
 }

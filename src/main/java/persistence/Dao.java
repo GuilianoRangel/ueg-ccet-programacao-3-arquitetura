@@ -90,17 +90,17 @@ public class Dao implements IDao{
     private void setPreparedStatmentForWhere(Table table, PreparedStatement preparedStatement) throws SQLException {
         if(table!=null) {
             List<String> columnNamesWhere = table.getColumnNames();
-            System.out.println(columnNamesWhere);
+            // System.out.println(columnNamesWhere);
             int psInd = 1;
             for(int i=1; i <= columnNamesWhere.size(); i++){
                 String columnName = columnNamesWhere.get(i-1);
                 Object value = table.getColumnValue(columnNamesWhere.get(i-1));
-                System.out.println("Value:"+columnNamesWhere.get(i-1)+"="+value+" psInd:"+psInd);
+                // System.out.println("Value:"+columnNamesWhere.get(i-1)+"="+value+" psInd:"+psInd);
                 if(value != null){
                     if(value instanceof  String && !columnName.equals(table.getPkColumnName())){
                         value = (String)value + "%";
                     }
-                    System.out.println("Value:"+columnNamesWhere.get(i-1)+"="+value);
+                    // System.out.println("Value:"+columnNamesWhere.get(i-1)+"="+value);
                     preparedStatement.setObject(psInd++, value);
                 }
             }
@@ -160,7 +160,7 @@ public class Dao implements IDao{
                 " values("+tableStrColumnValues+")";
         System.out.println("SQL Insert: "+sql);
         PreparedStatement ps;
-        ps = getPreparedStatementForInsert(PersistenceAction.INSERT,sql);
+        ps = getPreparedStatementForAction(PersistenceAction.INSERT,sql);
         Return rt = setValuesPreparedstatementForInsert(table, ps);
         if (rt != null) return rt;
 
@@ -183,7 +183,45 @@ public class Dao implements IDao{
     }
 
     public Return delete(Table<?> table) throws PersistenceException {
-        //TODO fazer implementação
+        validFilledTable(table);
+        Return ret = new Return(true,"Exclusão realizada com sucesso!");
+
+        String tableName = table.getTableName();
+        String pkName = table.getPkColumnName();
+        String sql = "delete from "+tableName+ "" +
+                " where "+pkName+" = ?";
+
+        PreparedStatement ps;
+
+        ps = getPreparedStatementForAction(PersistenceAction.DELETE,sql);
+        Return rt = setPreparedStatementForDelete(table, ps);
+        if (rt != null) return rt;
+
+        int ok = 0;
+        try {
+            ok = ps.executeUpdate();
+        } catch (SQLException e) {
+           ret = new Return(false, "Erro ao excluír!",Arrays.asList(e.getMessage()));
+           return ret;
+        }
+        if( ok!=1 ){
+            ret = new Return (false, "Exclusão falhou, nenhum item encontrado!");
+        }
+
+        return ret;
+    }
+
+    protected Return setPreparedStatementForDelete(Table<?> table, PreparedStatement ps) {
+        try {
+            ps.setObject(1, table.getPk());
+        }catch (SQLException e) {
+            Return rt = new Return(
+                    false,
+                    "Erro ao Configurar valor da PK na tabela " +
+                            table.getTableName()+ " no Campo: "+table.getPkColumnName()
+                            + "Valor informado: "+table.getPk(), Arrays.asList(e.getMessage()));
+            return rt;
+        }
         return null;
     }
 
@@ -205,7 +243,7 @@ public class Dao implements IDao{
 
         PreparedStatement ps;
 
-        ps = getPreparedStatementForInsert(PersistenceAction.UPDATE,sql);
+        ps = getPreparedStatementForAction(PersistenceAction.UPDATE,sql);
 
         Return rt = this.setValuesPreparedstatementForUpdate(table,ps);
 
@@ -270,7 +308,7 @@ public class Dao implements IDao{
         return null;
     }
 
-    private PreparedStatement getPreparedStatementForInsert(PersistenceAction pa, String sql) throws PersistenceException {
+    private PreparedStatement getPreparedStatementForAction(PersistenceAction pa, String sql) throws PersistenceException {
         PreparedStatement ps;
         try {
             ps = this.db.prepareStatement(sql);
@@ -307,4 +345,17 @@ public class Dao implements IDao{
         }
     }
 
+    /**
+     * Metod para retornar o objeto preenchido, buscando pela PK do objeto informado
+     * @param table - objeto com o atributo Pk preenchido.
+     * @return objeto Com todos os atributos preenchidos pelo banco ou Null senão encontrar.
+     */
+    public Table<?> getByPk(Table<?> table){
+        List<Table<?>> tables = this.find(table);
+        if( tables.size()!= 1){
+            return null;
+        }
+
+        return tables.get(0);
+    }
 }
