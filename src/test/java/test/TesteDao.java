@@ -15,7 +15,7 @@ public class TesteDao {
         Dao d = testeListaAll();
         //testeInsert(d);
         //testeUpdate(d);
-        //testeFind(d);
+        testeFind(d);
         testeDelete(d);
         testeGetByid(d);
     }
@@ -25,7 +25,7 @@ public class TesteDao {
         ft.setPk(11);
         Table<?> table = d.getByPk(ft);
         FakeTable ft2 = (FakeTable) table;
-        System.out.println(ft2.getNome());
+        //System.out.println(ft2.getNome());
         System.out.println(table);
     }
 
@@ -69,8 +69,8 @@ public class TesteDao {
     }
 
     private static Dao testeListaAll() {
-        Dao d = new Dao(new FakeTable());
-        System.out.println("Teste ListAll"+d.listAll());
+        Dao d = new Dao();
+        System.out.println("Teste ListAll"+d.listAll(new FakeTable()));
         return d;
     }
 

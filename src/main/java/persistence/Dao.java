@@ -15,11 +15,9 @@ import java.util.stream.Collectors;
 
 public class Dao implements IDao{
 
-    private final Table<?> table;
     private Connection db;
 
-    public Dao(Table table){
-        this.table = table;
+    public Dao(){
         this.db = persistence.conection.Connection.getIntance().getDb();
     }
 
@@ -40,16 +38,17 @@ public class Dao implements IDao{
 
     private List<String> getTableColumnNamesWithoutPk(Table<?> table){
         List<String> lista = table.getColumnNames().stream().filter(
-                value -> !value.equals(this.table.getPkColumnNameUtil())
+                value -> !value.equals(table.getPkColumnNameUtil())
         ).collect(Collectors.toList());
         return lista;
     }
 
-    public List<Table<?>> listAll(){
-        return findOrList(null);
+    @Override
+    public <T extends Table<?>> List<T> listAll(T table) {
+        return findOrList(table);
     }
 
-    public List<Table<?>> find(Table<?> table){
+    public <T extends Table<?>> List<T> find(T table){
         return findOrList(table);
     }
 
@@ -61,9 +60,9 @@ public class Dao implements IDao{
      * @param table  objeto com os valores de busca
      * @return - lista de Table conforme parâmetros informados.
      */
-    private List<Table<?>> findOrList(Table table) {
-        String columnNames =this.getTableColumnsNamesForSelect(this.table.getColumnNames());
-        String tableName = this.table.getTableName();
+    private <T extends Table<?>> List<T> findOrList(T table) {
+        String columnNames =this.getTableColumnsNamesForSelect(table.getColumnNames());
+        String tableName = table.getTableName();
         String sql = "select " + columnNames + " from " + tableName ;
         // Gerar SQL de where " where colun1 = ? and colu=?
         String sqlWhere = getFindStringWhere(table);
@@ -72,7 +71,7 @@ public class Dao implements IDao{
         // TODO Remover debug
         System.out.println("SQL: " + sql);
 
-        List<Table<?>> list;
+        List<T> list;
         try {
             PreparedStatement preparedStatement = this.db.prepareStatement(sql);
 
@@ -80,7 +79,7 @@ public class Dao implements IDao{
             setPreparedStatmentForWhere(table, preparedStatement);
 
             ResultSet rs = preparedStatement.executeQuery();
-            list = getListTableFromResultset(rs);
+            list = getListTableFromResultset(rs, table);
         } catch (SQLException e) {
           throw new RuntimeException(e);
         }
@@ -129,14 +128,14 @@ public class Dao implements IDao{
         return sqlWhere;
     }
 
-    private List<Table<?>> getListTableFromResultset(ResultSet rs) throws SQLException {
-        List<Table<?>> list = new ArrayList<>();
+    private <T extends Table<?>> List<T> getListTableFromResultset(ResultSet rs, T table) throws SQLException {
+        List<T> list = new ArrayList<>();
         while(rs.next()){
             List<Object> valores = new ArrayList<>();
-            for (String columnName : this.table.getColumnNames()) {
+            for (String columnName : table.getColumnNames()) {
                 valores.add(rs.getObject(columnName));
             }
-            Table newTable = this.table.getNewTableObject();
+            T newTable = (T) table.getNewTableObject();
             // TODO verificar posteriormente se faz um tratamento do erro
             // de configuração dos campos.
             newTable.setTableColumnValues(valores);
@@ -350,8 +349,8 @@ public class Dao implements IDao{
      * @param table - objeto com o atributo Pk preenchido.
      * @return objeto Com todos os atributos preenchidos pelo banco ou Null senão encontrar.
      */
-    public Table<?> getByPk(Table<?> table){
-        List<Table<?>> tables = this.find(table);
+    public <T extends Table<?>> T getByPk(T table){
+        List<T> tables = this.find(table);
         if( tables.size()!= 1){
             return null;
         }

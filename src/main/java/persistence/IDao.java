@@ -7,10 +7,10 @@ import utils.Return;
 import java.util.List;
 
 public interface IDao {
-    List<Table<?>> listAll();
-    List<Table<?>> find(Table<?> table);
+    <T extends Table<?>> List<T> listAll(T table);
+    <T extends Table<?>> List<T> find(T table);
     Return update(Table<?> table) throws PersistenceException;
     Return insert(Table<?> table) throws PersistenceException;
     Return delete(Table<?> table) throws PersistenceException;
-    Table<?> getByPk(Table<?> table)throws PersistenceException;
+    <T extends Table<?>> T getByPk(T table)throws PersistenceException;
 }
