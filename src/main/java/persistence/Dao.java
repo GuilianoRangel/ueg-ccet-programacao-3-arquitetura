@@ -13,12 +13,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class Dao implements IDao{
+public abstract class Dao<TYPE, TABLE extends Table<TYPE>> implements IDao<TYPE, TABLE>{
 
-    private final Table<?> table;
+    private final TABLE table;
     private Connection db;
 
-    public Dao(Table table){
+    public Dao(TABLE table){
         this.table = table;
         this.db = persistence.conection.Connection.getIntance().getDb();
     }
@@ -27,7 +27,7 @@ public class Dao implements IDao{
         return String.join(",", lista);
     }
 
-    private List<String> getTableColumnsNamesForInsert(Table table) {
+    private List<String> getTableColumnsNamesForInsert(TABLE table) {
         List<String> columnNames = table.getColumnNames();
         //se for para utilizar o pk no insert retornas todas as colunas
         if(table.usePkInInsert()){
@@ -38,18 +38,18 @@ public class Dao implements IDao{
         return lista;
     }
 
-    private List<String> getTableColumnNamesWithoutPk(Table<?> table){
+    private List<String> getTableColumnNamesWithoutPk(TABLE table){
         List<String> lista = table.getColumnNames().stream().filter(
                 value -> !value.equals(this.table.getPkColumnNameUtil())
         ).collect(Collectors.toList());
         return lista;
     }
 
-    public List<Table<?>> listAll(){
+    public List<TABLE> listAll(){
         return findOrList(null);
     }
 
-    public List<Table<?>> find(Table<?> table){
+    public List<TABLE> find(TABLE table){
         return findOrList(table);
     }
 
@@ -61,7 +61,7 @@ public class Dao implements IDao{
      * @param table  objeto com os valores de busca
      * @return - lista de Table conforme parâmetros informados.
      */
-    private List<Table<?>> findOrList(Table table) {
+    private List<TABLE> findOrList(TABLE table) {
         String columnNames =this.getTableColumnsNamesForSelect(this.table.getColumnNames());
         String tableName = this.table.getTableName();
         String sql = "select " + columnNames + " from " + tableName ;
@@ -72,7 +72,7 @@ public class Dao implements IDao{
         // TODO Remover debug
         System.out.println("SQL: " + sql);
 
-        List<Table<?>> list;
+        List<TABLE> list;
         try {
             PreparedStatement preparedStatement = this.db.prepareStatement(sql);
 
@@ -87,7 +87,7 @@ public class Dao implements IDao{
         return list;
     }
 
-    private void setPreparedStatmentForWhere(Table table, PreparedStatement preparedStatement) throws SQLException {
+    private void setPreparedStatmentForWhere(TABLE table, PreparedStatement preparedStatement) throws SQLException {
         if(table!=null) {
             List<String> columnNamesWhere = table.getColumnNames();
             // System.out.println(columnNamesWhere);
@@ -107,7 +107,7 @@ public class Dao implements IDao{
         }
     }
 
-    private String getFindStringWhere(Table table) {
+    private String getFindStringWhere(TABLE table) {
         String sqlWhere = "";
         if(table != null){
             List<String> columnWhere = table.getColumnNames();
@@ -129,14 +129,14 @@ public class Dao implements IDao{
         return sqlWhere;
     }
 
-    private List<Table<?>> getListTableFromResultset(ResultSet rs) throws SQLException {
-        List<Table<?>> list = new ArrayList<>();
+    private List<TABLE> getListTableFromResultset(ResultSet rs) throws SQLException {
+        List<TABLE> list = new ArrayList<>();
         while(rs.next()){
             List<Object> valores = new ArrayList<>();
             for (String columnName : this.table.getColumnNames()) {
                 valores.add(rs.getObject(columnName));
             }
-            Table newTable = this.table.getNewTableObject();
+            TABLE newTable = (TABLE) this.table.getNewTableObject();
             // TODO verificar posteriormente se faz um tratamento do erro
             // de configuração dos campos.
             newTable.setTableColumnValues(valores);
@@ -146,7 +146,7 @@ public class Dao implements IDao{
     }
 
     @Override
-    public Return insert(Table<?> table) throws PersistenceException {
+    public Return insert(TABLE table) throws PersistenceException {
         validFilledTable(table);
 
         String tableName = table.getTableName();
@@ -182,7 +182,7 @@ public class Dao implements IDao{
         return rt;
     }
 
-    public Return delete(Table<?> table) throws PersistenceException {
+    public Return delete(TABLE table) throws PersistenceException {
         validFilledTable(table);
         Return ret = new Return(true,"Exclusão realizada com sucesso!");
 
@@ -211,7 +211,7 @@ public class Dao implements IDao{
         return ret;
     }
 
-    protected Return setPreparedStatementForDelete(Table<?> table, PreparedStatement ps) {
+    protected Return setPreparedStatementForDelete(TABLE table, PreparedStatement ps) {
         try {
             ps.setObject(1, table.getPk());
         }catch (SQLException e) {
@@ -231,7 +231,7 @@ public class Dao implements IDao{
      * @param table
      * @return
      */
-    public Return update(Table<?> table) throws PersistenceException {
+    public Return update(TABLE table) throws PersistenceException {
         validFilledTable(table);
         String strColumForUpdate = getStrColumnForUpdate(table);
         String strPkName = table.getPkColumnName();
@@ -259,7 +259,7 @@ public class Dao implements IDao{
         return rt;
     }
 
-    private String getStrColumnForUpdate(Table table) {
+    private String getStrColumnForUpdate(TABLE table) {
         List<String> columnUpdates = this.getTableColumnNamesWithoutPk(table);
         String strColumForUpdate = "";
         for (String column : columnUpdates) {
@@ -269,13 +269,13 @@ public class Dao implements IDao{
         return strColumForUpdate;
     }
 
-    private Return setValuesPreparedstatementForInsert(Table table, PreparedStatement ps) {
+    private Return setValuesPreparedstatementForInsert(TABLE table, PreparedStatement ps) {
         // insert into fake_table(nome) values(?)
         // pk=10, nome="teste", telefone="234234"
         List<String> tableColumnNames = this.getTableColumnsNamesForInsert(table);
         return setValuesToTable(table, ps, tableColumnNames);
     }
-    private Return setValuesPreparedstatementForUpdate(Table table, PreparedStatement ps) {
+    private Return setValuesPreparedstatementForUpdate(TABLE table, PreparedStatement ps) {
         List<String> tableColumnNames = this.getTableColumnNamesWithoutPk(table);
         try {
             ps.setObject(tableColumnNames.size()+1, table.getPk());
@@ -290,7 +290,7 @@ public class Dao implements IDao{
         return setValuesToTable(table, ps, tableColumnNames);
     }
 
-    private Return setValuesToTable(Table table, PreparedStatement ps, List<String> tableColumnNames) {
+    private Return setValuesToTable(TABLE table, PreparedStatement ps, List<String> tableColumnNames) {
         for(int i = 1; i<= tableColumnNames.size(); i++ ){
             String columnName = tableColumnNames.get(i-1);
             Object value = table.getColumnValue(columnName);
@@ -326,7 +326,7 @@ public class Dao implements IDao{
      * @param table
      * @return
      */
-    private String getTableStrColumnsForInsert(Table table) {
+    private String getTableStrColumnsForInsert(TABLE table) {
         List<String> colunas = this.getTableColumnsNamesForInsert(table);
         String tableColumnValues = "";
         for (String coluna : colunas) {
@@ -337,7 +337,7 @@ public class Dao implements IDao{
     }
 
 
-    private void validFilledTable(Table table) throws PersistenceException {
+    private void validFilledTable(TABLE table) throws PersistenceException {
         if(table == null){
             throw new PersistenceException(
                     PersistenceAction.INSERT,
@@ -350,8 +350,8 @@ public class Dao implements IDao{
      * @param table - objeto com o atributo Pk preenchido.
      * @return objeto Com todos os atributos preenchidos pelo banco ou Null senão encontrar.
      */
-    public Table<?> getByPk(Table<?> table){
-        List<Table<?>> tables = this.find(table);
+    public TABLE getByPk(TABLE table){
+        List<TABLE> tables = this.find(table);
         if( tables.size()!= 1){
             return null;
         }

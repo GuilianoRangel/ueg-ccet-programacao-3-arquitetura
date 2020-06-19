@@ -5,6 +5,7 @@ import exceptions.PersistenceException;
 import model.FakeTable;
 import model.Table;
 import persistence.Dao;
+import persistence.DaoFakeTable;
 import persistence.IDao;
 import utils.Return;
 
@@ -12,18 +13,21 @@ import java.util.List;
 
 public class TesteDao {
     public static void main(String[] args) {
-        Dao d = testeListaAll();
+        DaoFakeTable d = testeListaAll();
         //testeInsert(d);
         //testeUpdate(d);
-        //testeFind(d);
+        testeFind(d);
         testeDelete(d);
         testeGetByid(d);
     }
 
-    protected static void testeGetByid(Dao d) {
+    protected static void testeGetByid(DaoFakeTable d) {
         FakeTable ft = new FakeTable();
         ft.setPk(11);
-        Table<?> table = d.getByPk(ft);
+        FakeTable table = null;
+
+        table = d.getByPk(ft);
+
         FakeTable ft2 = (FakeTable) table;
         System.out.println(ft2.getNome());
         System.out.println(table);
@@ -47,7 +51,7 @@ public class TesteDao {
         FakeTable ftf = new FakeTable();
         ftf.setNome("T");
         //ftf.setTelefone("%%%");;
-        List<Table<?>> tables = d.find(ftf);
+        List<FakeTable> tables = d.find(ftf);
         System.out.println(tables);
 
         FakeTable ft2 = new FakeTable();
@@ -68,9 +72,11 @@ public class TesteDao {
         }
     }
 
-    private static Dao testeListaAll() {
-        Dao d = new Dao(new FakeTable());
-        System.out.println("Teste ListAll"+d.listAll());
+    private static DaoFakeTable testeListaAll() {
+        DaoFakeTable d = new DaoFakeTable(new FakeTable());
+        List<FakeTable> list = d.listAll();
+        list.get(0).getNome();
+        System.out.println("Teste ListAll"+ list);
         return d;
     }
 

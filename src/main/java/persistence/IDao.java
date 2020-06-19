@@ -6,11 +6,11 @@ import utils.Return;
 
 import java.util.List;
 
-public interface IDao {
-    List<Table<?>> listAll();
-    List<Table<?>> find(Table<?> table);
-    Return update(Table<?> table) throws PersistenceException;
-    Return insert(Table<?> table) throws PersistenceException;
-    Return delete(Table<?> table) throws PersistenceException;
-    Table<?> getByPk(Table<?> table)throws PersistenceException;
+public interface IDao<TYPE, TABLE extends Table<TYPE>> {
+    List<TABLE> listAll();
+    List<TABLE> find(TABLE table);
+    Return update(TABLE table) throws PersistenceException;
+    Return insert(TABLE table) throws PersistenceException;
+    Return delete(TABLE table) throws PersistenceException;
+    TABLE getByPk(TABLE table)throws PersistenceException;
 }
